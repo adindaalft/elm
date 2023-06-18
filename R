@@ -1,0 +1,34 @@
+#Import data
+co2 = read.csv(file.choose(),header = TRUE, sep = ",")
+View(co2)
+library(xts)
+library(forecast)
+
+tanggal = seq(as.Date("1973-01-01"),length = nrow(co2), by = "days")
+co2_ts = xts(co2$y_im, order.by = tanggal)
+autoplot(co2_ts)
+n = round(0.85*NROW(co2_ts),0)
+train = ts(co2_ts[1:n], frequency = 1)
+test = ts(co2_ts[(n+1):NROW(co2_ts)], frequency = 1)
+library(nnfor)
+
+#ELM Model
+set.seed(123)
+fit = elm(train,
+          hd = 10,
+          type = "ridge",
+          reps = 20,
+          comb = "median",
+          lags = 1:12,
+          allow.det.season = T)
+fit
+plot(fit,2)
+
+#Prediction
+pred = forecast(fit, NROW(test))
+autoplot(pred)
+
+#Error
+error_1 = as.numeric(test) - as.numeric(pred$mean)
+rmse_1 = sqrt(fit$MSE)
+mape_1 = mean(abs(error_1/test))*100
